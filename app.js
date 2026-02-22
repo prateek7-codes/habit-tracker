@@ -4,10 +4,31 @@ const form = document.getElementById('add-form');
 const input = document.getElementById('habit-input');
 const list = document.getElementById('habit-list');
 
+/* ---------- Helpers ---------- */
+function getTodayDate() {
+  return new Date().toISOString().split("T")[0];
+}
+
+function getYesterdayDate() {
+  const d = new Date();
+  d.setDate(d.getDate() - 1);
+  return d.toISOString().split("T")[0];
+}
+
+/* ---------- Storage ---------- */
 function loadHabits() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    return raw ? JSON.parse(raw) : [];
+    const habits = raw ? JSON.parse(raw) : [];
+
+    // Normalize old habits
+    return habits.map(habit => ({
+      ...habit,
+      completedToday: habit.completedToday ?? habit.completed ?? false,
+      lastCompletedDate: habit.lastCompletedDate ?? null,
+      streak: habit.streak ?? 0
+    }));
+
   } catch {
     return [];
   }
@@ -17,18 +38,23 @@ function saveHabits(habits) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(habits));
 }
 
+/* ---------- Rendering ---------- */
 function renderHabits(habits) {
   list.innerHTML = habits
-    .map((habit, index) => {
-      const completed = habit.completed ? ' completed' : '';
+    .map((habit) => {
+      const completedClass = habit.completedToday ? ' completed' : '';
+
       return `
-        <li class="habit-item${completed}" data-id="${habit.id}">
-          <span class="habit-name">${escapeHtml(habit.name)}</span>
+        <li class="habit-item${completedClass}" data-id="${habit.id}">
+          <div class="habit-info">
+            <span class="habit-name">${escapeHtml(habit.name)}</span>
+            <span class="habit-streak">🔥 ${habit.streak}</span>
+          </div>
           <div class="habit-actions">
-            <button type="button" class="btn btn-complete" aria-label="Mark ${habit.completed ? 'incomplete' : 'complete'}">
-              ${habit.completed ? 'Done' : 'Mark Complete'}
+            <button type="button" class="btn btn-complete">
+              ${habit.completedToday ? 'Done' : 'Mark Complete'}
             </button>
-            <button type="button" class="btn btn-delete" aria-label="Delete habit">×</button>
+            <button type="button" class="btn btn-delete">×</button>
           </div>
         </li>
       `;
@@ -48,11 +74,30 @@ function escapeHtml(text) {
   return div.innerHTML;
 }
 
+/* ---------- Actions ---------- */
 function toggleComplete(id) {
   const habits = loadHabits();
   const habit = habits.find((h) => h.id === id);
   if (!habit) return;
-  habit.completed = !habit.completed;
+
+  const today = getTodayDate();
+  const yesterday = getYesterdayDate();
+
+  if (!habit.completedToday) {
+    // Increase streak only if completed yesterday
+    if (habit.lastCompletedDate === yesterday) {
+      habit.streak += 1;
+    } else {
+      habit.streak = 1;
+    }
+
+    habit.completedToday = true;
+    habit.lastCompletedDate = today;
+
+  } else {
+    habit.completedToday = false;
+  }
+
   saveHabits(habits);
   renderHabits(habits);
 }
@@ -66,21 +111,44 @@ function deleteHabit(id) {
 function addHabit(name) {
   const trimmed = name.trim();
   if (!trimmed) return;
+
   const habits = loadHabits();
+
   habits.push({
     id: crypto.randomUUID(),
     name: trimmed,
-    completed: false,
+    completedToday: false,
+    lastCompletedDate: null,
+    streak: 0
   });
+
   saveHabits(habits);
   renderHabits(habits);
+
   input.value = '';
   input.focus();
 }
 
+/* ---------- Daily Reset On Load ---------- */
+function initializeApp() {
+  const habits = loadHabits();
+  const today = getTodayDate();
+
+  habits.forEach(habit => {
+    if (habit.lastCompletedDate !== today) {
+      habit.completedToday = false;
+    }
+  });
+
+  saveHabits(habits);
+  renderHabits(habits);
+}
+
+/* ---------- Events ---------- */
 form.addEventListener('submit', (e) => {
   e.preventDefault();
   addHabit(input.value);
 });
 
-renderHabits(loadHabits());
+/* ---------- Start ---------- */
+initializeApp();
