@@ -4,18 +4,29 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Habit Tracker</title>
+
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+
   <link rel="stylesheet" href="styles.css">
 </head>
+
 <body>
   <main class="app">
+
+    <!-- HEADER -->
     <header class="header">
-      <h1>Habit Tracker</h1>
+      <div class="header-top">
+        <h1>Habit Tracker</h1>
+        <button id="theme-toggle" class="theme-toggle" aria-label="Toggle theme">
+          🌙
+        </button>
+      </div>
       <p class="tagline">Build habits, one day at a time</p>
     </header>
 
+    <!-- ADD HABIT FORM -->
     <form class="add-form" id="add-form">
       <input
         type="text"
@@ -25,11 +36,16 @@
         autocomplete="off"
         required
       />
-      <button type="submit" class="btn btn-add">Add</button>
+      <button type="submit" class="btn btn-add">
+        Add
+      </button>
     </form>
 
+    <!-- HABIT LIST -->
     <ul class="habit-list" id="habit-list"></ul>
+
   </main>
+
   <script src="app.js"></script>
 </body>
 </html>

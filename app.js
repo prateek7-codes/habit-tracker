@@ -150,5 +150,28 @@ form.addEventListener('submit', (e) => {
   addHabit(input.value);
 });
 
+function initializeTheme() {
+  const themeToggle = document.getElementById("theme-toggle");
+  const THEME_KEY = "habit-tracker-theme";
+
+  if (!themeToggle) return;
+
+  const savedTheme = localStorage.getItem(THEME_KEY);
+
+  if (savedTheme === "dark") {
+    document.body.classList.add("dark");
+    themeToggle.textContent = "☀️";
+  }
+
+  themeToggle.addEventListener("click", () => {
+    document.body.classList.toggle("dark");
+
+    const isDark = document.body.classList.contains("dark");
+    localStorage.setItem(THEME_KEY, isDark ? "dark" : "light");
+
+    themeToggle.textContent = isDark ? "☀️" : "🌙";
+  });
+}
 /* ---------- Start ---------- */
 initializeApp();
+initializeTheme();
