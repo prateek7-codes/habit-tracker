@@ -24,9 +24,12 @@ function renderHabits(habits) {
       return `
         <li class="habit-item${completed}" data-id="${habit.id}">
           <span class="habit-name">${escapeHtml(habit.name)}</span>
-          <button type="button" class="btn btn-complete" aria-label="Mark ${habit.completed ? 'incomplete' : 'complete'}">
-            ${habit.completed ? 'Done' : 'Mark Complete'}
-          </button>
+          <div class="habit-actions">
+            <button type="button" class="btn btn-complete" aria-label="Mark ${habit.completed ? 'incomplete' : 'complete'}">
+              ${habit.completed ? 'Done' : 'Mark Complete'}
+            </button>
+            <button type="button" class="btn btn-delete" aria-label="Delete habit">×</button>
+          </div>
         </li>
       `;
     })
@@ -35,6 +38,7 @@ function renderHabits(habits) {
   list.querySelectorAll('.habit-item').forEach((el) => {
     const id = el.dataset.id;
     el.querySelector('.btn-complete').addEventListener('click', () => toggleComplete(id));
+    el.querySelector('.btn-delete').addEventListener('click', () => deleteHabit(id));
   });
 }
 
@@ -49,6 +53,12 @@ function toggleComplete(id) {
   const habit = habits.find((h) => h.id === id);
   if (!habit) return;
   habit.completed = !habit.completed;
+  saveHabits(habits);
+  renderHabits(habits);
+}
+
+function deleteHabit(id) {
+  const habits = loadHabits().filter((h) => h.id !== id);
   saveHabits(habits);
   renderHabits(habits);
 }
