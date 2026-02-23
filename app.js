@@ -1,5 +1,9 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
+const supabaseUrl = "https://bbvdctpmyhsydnpseuvz.supabase.co";
+const supabaseKey = "sb_publishable_l_f9mvxnd2UO2W39UuxrpQ_fQrdOIrT";
+
+const supabase = createClient(supabaseUrl, supabaseKey);
 const form = document.getElementById('add-form');
 const input = document.getElementById('habit-input');
 const list = document.getElementById('habit-list');
@@ -8,18 +12,6 @@ const metricActive = document.getElementById('metric-active');
 const metricCompleted = document.getElementById('metric-completed');
 
 const DEVICE_ID_KEY = 'habit-tracker-device-id';
-const SUPABASE_URL = window.NEXT_PUBLIC_SUPABASE_URL;
-const SUPABASE_ANON_KEY = window.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-
-if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
-  console.warn(
-    'Supabase URL or anon key missing. Please set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY on window. Habits will not be persisted.'
-  );
-}
-
-const supabase = SUPABASE_URL && SUPABASE_ANON_KEY
-  ? createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
-  : null;
 
 let stateHabits = [];
 
