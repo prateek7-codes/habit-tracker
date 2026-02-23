@@ -1,60 +1,143 @@
-const STORAGE_KEY = 'habit-tracker-habits';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
 const form = document.getElementById('add-form');
 const input = document.getElementById('habit-input');
 const list = document.getElementById('habit-list');
+const emptyState = document.getElementById('empty-state');
+const metricActive = document.getElementById('metric-active');
+const metricCompleted = document.getElementById('metric-completed');
+
+const DEVICE_ID_KEY = 'habit-tracker-device-id';
+const SUPABASE_URL = window.NEXT_PUBLIC_SUPABASE_URL;
+const SUPABASE_ANON_KEY = window.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
+  console.warn(
+    'Supabase URL or anon key missing. Please set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY on window. Habits will not be persisted.'
+  );
+}
+
+const supabase = SUPABASE_URL && SUPABASE_ANON_KEY
+  ? createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
+  : null;
+
+let stateHabits = [];
 
 /* ---------- Helpers ---------- */
 function getTodayDate() {
-  return new Date().toISOString().split("T")[0];
+  return new Date().toISOString().split('T')[0];
 }
 
 function getYesterdayDate() {
   const d = new Date();
   d.setDate(d.getDate() - 1);
-  return d.toISOString().split("T")[0];
+  return d.toISOString().split('T')[0];
 }
 
-/* ---------- Storage ---------- */
-function loadHabits() {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    const habits = raw ? JSON.parse(raw) : [];
+function getDeviceId() {
+  let id = localStorage.getItem(DEVICE_ID_KEY);
+  if (!id) {
+    id = crypto.randomUUID();
+    localStorage.setItem(DEVICE_ID_KEY, id);
+  }
+  return id;
+}
 
-    // Normalize old habits
-    return habits.map(habit => ({
-      ...habit,
-      completedToday: habit.completedToday ?? habit.completed ?? false,
-      lastCompletedDate: habit.lastCompletedDate ?? null,
-      streak: habit.streak ?? 0
-    }));
+function normalizeHabit(row) {
+  return {
+    id: row.id,
+    deviceId: row.device_id,
+    name: row.name,
+    completedToday:
+      row.completed_today ?? row.completedToday ?? row.completed ?? false,
+    lastCompletedDate: row.last_completed_date ?? row.lastCompletedDate ?? null,
+    streak: row.streak ?? 0,
+  };
+}
 
-  } catch {
+function habitToRow(habit) {
+  return {
+    id: habit.id,
+    device_id: habit.deviceId,
+    name: habit.name,
+    completed_today: habit.completedToday,
+    last_completed_date: habit.lastCompletedDate,
+    streak: habit.streak,
+  };
+}
+
+/* ---------- Remote Storage (Supabase) ---------- */
+async function fetchHabits() {
+  if (!supabase) return [];
+
+  const deviceId = getDeviceId();
+  const { data, error } = await supabase
+    .from('habits')
+    .select('*')
+    .eq('device_id', deviceId)
+    .order('created_at', { ascending: true });
+
+  if (error) {
+    console.error('Error fetching habits from Supabase', error);
     return [];
   }
+
+  return data.map(normalizeHabit);
 }
 
-function saveHabits(habits) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(habits));
+async function upsertHabits(habits) {
+  if (!supabase || !habits.length) return;
+  const rows = habits.map(habitToRow);
+  const { error } = await supabase.from('habits').upsert(rows);
+  if (error) {
+    console.error('Error upserting habits', error);
+  }
 }
 
 /* ---------- Rendering ---------- */
 function renderHabits(habits) {
+  stateHabits = habits;
+  const hasHabits = habits.length > 0;
+
+  if (emptyState) {
+    emptyState.classList.toggle('hidden', hasHabits);
+  }
+
+  if (metricActive && metricCompleted) {
+    const activeCount = habits.filter((h) => !h.completedToday).length;
+    const completedCount = habits.filter((h) => h.completedToday).length;
+    metricActive.textContent = String(activeCount);
+    metricCompleted.textContent = String(completedCount);
+  }
+
+  if (!hasHabits) {
+    list.innerHTML = '';
+    return;
+  }
+
   list.innerHTML = habits
     .map((habit) => {
-      const completedClass = habit.completedToday ? ' completed' : '';
+      const completedClasses = habit.completedToday
+        ? ' completed bg-emerald-50/70 border-emerald-200/80 dark:bg-emerald-900/40 dark:border-emerald-600/70'
+        : '';
+
+      const buttonCompletedClasses = habit.completedToday
+        ? ' border-emerald-500/80 text-emerald-600 bg-emerald-50 hover:bg-emerald-500 hover:text-emerald-50 dark:border-emerald-400/80 dark:text-emerald-200 dark:bg-emerald-900/60 dark:hover:bg-emerald-400 dark:hover:text-emerald-950'
+        : ' border-sky-500/80 text-sky-600 bg-sky-50 hover:bg-sky-500 hover:text-sky-50 dark:border-sky-400/80 dark:text-sky-200 dark:bg-sky-900/60 dark:hover:bg-sky-400 dark:hover:text-slate-950';
 
       return `
-        <li class="habit-item${completedClass}" data-id="${habit.id}">
-          <div class="habit-info">
-            <span class="habit-name">${escapeHtml(habit.name)}</span>
-            <span class="habit-streak">🔥 ${habit.streak}</span>
+        <li class="habit-item group flex items-center justify-between gap-4 rounded-2xl border border-slate-200/80 bg-white/90 p-4 shadow-sm backdrop-blur-sm transition hover:-translate-y-0.5 hover:shadow-lg dark:border-slate-800/70 dark:bg-slate-900/80${completedClasses}" data-id="${habit.id}">
+          <div class="flex min-w-0 flex-col gap-1">
+            <p class="truncate text-sm font-medium text-slate-900 dark:text-slate-50">${escapeHtml(habit.name)}</p>
+            <p class="text-xs font-medium text-amber-500">🔥 ${habit.streak} day streak</p>
           </div>
-          <div class="habit-actions">
-            <button type="button" class="btn btn-complete">
-              ${habit.completedToday ? 'Done' : 'Mark Complete'}
+          <div class="flex shrink-0 items-center gap-2">
+            <button type="button" class="btn btn-complete inline-flex items-center justify-center rounded-full border px-3 py-1 text-xs font-semibold tracking-wide shadow-sm ring-offset-background transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 focus-visible:ring-offset-2 dark:focus-visible:ring-sky-400${buttonCompletedClasses}">
+              ${habit.completedToday ? 'Done' : 'Mark'}
             </button>
-            <button type="button" class="btn btn-delete">×</button>
+            <button type="button" class="btn btn-delete inline-flex h-8 w-8 items-center justify-center rounded-full text-slate-400 transition hover:bg-rose-500/10 hover:text-rose-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-500 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-50 dark:text-slate-500 dark:hover:bg-rose-500/15 dark:hover:text-rose-400 dark:focus-visible:ring-offset-slate-950" aria-label="Delete habit">
+              ×
+            </button>
           </div>
         </li>
       `;
@@ -75,16 +158,14 @@ function escapeHtml(text) {
 }
 
 /* ---------- Actions ---------- */
-function toggleComplete(id) {
-  const habits = loadHabits();
-  const habit = habits.find((h) => h.id === id);
+async function toggleComplete(id) {
+  const habit = stateHabits.find((h) => h.id === id);
   if (!habit) return;
 
   const today = getTodayDate();
   const yesterday = getYesterdayDate();
 
   if (!habit.completedToday) {
-    // Increase streak only if completed yesterday
     if (habit.lastCompletedDate === yesterday) {
       habit.streak += 1;
     } else {
@@ -93,84 +174,134 @@ function toggleComplete(id) {
 
     habit.completedToday = true;
     habit.lastCompletedDate = today;
-
   } else {
     habit.completedToday = false;
   }
 
-  saveHabits(habits);
-  renderHabits(habits);
+  if (supabase) {
+    const { error } = await supabase
+      .from('habits')
+      .update({
+        completed_today: habit.completedToday,
+        last_completed_date: habit.lastCompletedDate,
+        streak: habit.streak,
+      })
+      .eq('id', habit.id);
+
+    if (error) {
+      console.error('Error updating habit', error);
+    }
+  }
+
+  renderHabits([...stateHabits]);
 }
 
-function deleteHabit(id) {
-  const habits = loadHabits().filter((h) => h.id !== id);
-  saveHabits(habits);
-  renderHabits(habits);
+async function deleteHabit(id) {
+  if (supabase) {
+    const { error } = await supabase.from('habits').delete().eq('id', id);
+    if (error) {
+      console.error('Error deleting habit', error);
+    }
+  }
+
+  stateHabits = stateHabits.filter((h) => h.id !== id);
+  renderHabits(stateHabits);
 }
 
-function addHabit(name) {
+async function addHabit(name) {
   const trimmed = name.trim();
   if (!trimmed) return;
 
-  const habits = loadHabits();
+  const deviceId = getDeviceId();
 
-  habits.push({
+  const newHabit = {
     id: crypto.randomUUID(),
+    deviceId,
     name: trimmed,
     completedToday: false,
     lastCompletedDate: null,
-    streak: 0
-  });
+    streak: 0,
+  };
 
-  saveHabits(habits);
-  renderHabits(habits);
+  if (supabase) {
+    const { error } = await supabase
+      .from('habits')
+      .insert(habitToRow(newHabit));
+
+    if (error) {
+      console.error('Error inserting habit', error);
+    }
+  }
+
+  stateHabits = [...stateHabits, newHabit];
+  renderHabits(stateHabits);
 
   input.value = '';
   input.focus();
 }
 
 /* ---------- Daily Reset On Load ---------- */
-function initializeApp() {
-  const habits = loadHabits();
+async function initializeApp() {
+  let habits = await fetchHabits();
   const today = getTodayDate();
 
-  habits.forEach(habit => {
-    if (habit.lastCompletedDate !== today) {
+  const toReset = [];
+
+  habits.forEach((habit) => {
+    if (habit.lastCompletedDate !== today && habit.completedToday) {
       habit.completedToday = false;
+      toReset.push(habit);
     }
   });
 
-  saveHabits(habits);
+  if (toReset.length) {
+    await upsertHabits(toReset);
+  }
+
   renderHabits(habits);
 }
 
 /* ---------- Events ---------- */
-form.addEventListener('submit', (e) => {
+form.addEventListener('submit', async (e) => {
   e.preventDefault();
-  addHabit(input.value);
+  await addHabit(input.value);
 });
 
 function initializeTheme() {
-  const themeToggle = document.getElementById("theme-toggle");
-  const THEME_KEY = "habit-tracker-theme";
+  const themeToggle = document.getElementById('theme-toggle');
+  const THEME_KEY = 'habit-tracker-theme';
 
   if (!themeToggle) return;
 
+  const prefersDark =
+    window.matchMedia &&
+    window.matchMedia('(prefers-color-scheme: dark)').matches;
   const savedTheme = localStorage.getItem(THEME_KEY);
+  const initialDark = savedTheme === 'dark' || (!savedTheme && prefersDark);
 
-  if (savedTheme === "dark") {
-    document.body.classList.add("dark");
-    themeToggle.textContent = "☀️";
+  applyTheme(initialDark);
+
+  themeToggle.addEventListener('click', () => {
+    const isDark = !document.documentElement.classList.contains('dark');
+    applyTheme(isDark);
+    localStorage.setItem(THEME_KEY, isDark ? 'dark' : 'light');
+  });
+}
+
+function applyTheme(isDark) {
+  const root = document.documentElement;
+  const thumb = document.getElementById('theme-thumb');
+
+  if (isDark) {
+    root.classList.add('dark');
+  } else {
+    root.classList.remove('dark');
   }
 
-  themeToggle.addEventListener("click", () => {
-    document.body.classList.toggle("dark");
-
-    const isDark = document.body.classList.contains("dark");
-    localStorage.setItem(THEME_KEY, isDark ? "dark" : "light");
-
-    themeToggle.textContent = isDark ? "☀️" : "🌙";
-  });
+  if (thumb) {
+    thumb.classList.toggle('translate-x-5', isDark);
+    thumb.textContent = isDark ? '☾' : '☀';
+  }
 }
 /* ---------- Start ---------- */
 initializeApp();
