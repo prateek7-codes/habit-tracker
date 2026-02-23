@@ -296,5 +296,7 @@ function applyTheme(isDark) {
   }
 }
 /* ---------- Start ---------- */
-initializeApp();
-initializeTheme();
+document.addEventListener('DOMContentLoaded', () => {
+  initializeApp();
+  initializeTheme();
+});
