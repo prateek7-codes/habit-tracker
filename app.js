@@ -180,25 +180,34 @@ function initializeTheme() {
   const saved = localStorage.getItem(key);
   const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
 
-  const startDark = saved ? saved === 'dark' : prefersDark;
-  setDark(startDark);
+  if (saved === 'dark' || (!saved && prefersDark)) {
+    document.documentElement.classList.add('dark');
+    if (thumb) {
+      thumb.classList.add('translate-x-5');
+      thumb.textContent = '☾';
+    }
+  }
 
   toggle.addEventListener('click', () => {
     const isDark = document.documentElement.classList.contains('dark');
-    const next = !isDark;
-    setDark(next);
-    localStorage.setItem(key, next ? 'dark' : 'light');
-  });
 
-  function setDark(enable) {
-    document.documentElement.classList.toggle('dark', enable);
-    if (thumb) {
-      thumb.classList.toggle('translate-x-5', enable);
-      thumb.textContent = enable ? '☾' : '☀';
+    if (isDark) {
+      document.documentElement.classList.remove('dark');
+      localStorage.setItem(key, 'light');
+      if (thumb) {
+        thumb.classList.remove('translate-x-5');
+        thumb.textContent = '☀';
+      }
+    } else {
+      document.documentElement.classList.add('dark');
+      localStorage.setItem(key, 'dark');
+      if (thumb) {
+        thumb.classList.add('translate-x-5');
+        thumb.textContent = '☾';
+      }
     }
-  }
+  });
 }
-
 /* ---------- Initialize ---------- */
 document.addEventListener('DOMContentLoaded', async () => {
   form = document.getElementById('add-form');
