@@ -4,6 +4,7 @@
   "description": "",
   "main": "app.js",
   "scripts": {
+    "build:css": "tailwindcss -i ./input.css -o ./styles.css --minify",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
@@ -20,5 +21,8 @@
   "homepage": "https://github.com/prateek7-codes/habit-tracker#readme",
   "dependencies": {
     "@supabase/supabase-js": "^2.97.0"
+  },
+  "devDependencies": {
+    "tailwindcss": "^4.2.1"
   }
 }
