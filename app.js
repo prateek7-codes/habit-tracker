@@ -5,6 +5,48 @@ const supabaseUrl = "https://bbvdctpmyhsydnpseuvz.supabase.co";
 const supabaseKey = "sb_publishable_l_f9mvxnd2UO2W39UuxrpQ_fQrdOIrT";
 const supabase = createClient(supabaseUrl, supabaseKey);
 
+// ---------- AUTH SETUP ----------
+
+async function checkAuth() {
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+
+  const authSection = document.getElementById("auth-section");
+  const addForm = document.getElementById("add-form");
+
+  if (!session) {
+    // Not logged in
+    if (addForm) addForm.style.display = "none";
+    if (authSection) authSection.style.display = "block";
+  } else {
+    // Logged in
+    if (authSection) authSection.style.display = "none";
+    if (addForm) addForm.style.display = "flex";
+  }
+}
+
+async function loginWithEmail() {
+  const emailInput = document.getElementById("email-input");
+  const email = emailInput.value;
+
+  if (!email) {
+    alert("Please enter your email");
+    return;
+  }
+
+  const { error } = await supabase.auth.signInWithOtp({
+    email: email,
+  });
+
+  if (error) {
+    alert("Error sending login link");
+    console.error(error);
+  } else {
+    alert("Check your email for the login link!");
+  }
+}
+
 /* ---------- DOM References (Declared only) ---------- */
 let form;
 let input;
@@ -210,6 +252,13 @@ function initializeTheme() {
 }
 /* ---------- Initialize ---------- */
 document.addEventListener('DOMContentLoaded', async () => {
+  const loginBtn = document.getElementById("email-login-btn");
+
+if (loginBtn) {
+  loginBtn.addEventListener("click", loginWithEmail);
+}
+
+checkAuth();
   form = document.getElementById('add-form');
   input = document.getElementById('habit-input');
   list = document.getElementById('habit-list');
