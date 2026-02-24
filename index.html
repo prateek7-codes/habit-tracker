@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Habit Studio · Minimal Habit Tracker</title>
-
+  
     <!-- Google Font -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -12,10 +12,8 @@
       href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap"
       rel="stylesheet"
     />
-
-    <script src="https://cdn.tailwindcss.com?darkMode=class"></script>
-
-    <!-- Tailwind Dark Mode Config -->
+  
+    <!-- Tailwind Config (MUST be before CDN) -->
     <script>
       window.tailwind = {
         config: {
@@ -30,12 +28,9 @@
         },
       };
     </script>
-
-    <!-- Tailwind CDN -->
+  
+    <!-- Tailwind CDN (ONLY ONCE) -->
     <script src="https://cdn.tailwindcss.com"></script>
-
-    <!-- Your Custom CSS -->
-    <link rel="stylesheet" href="styles.css" />
   </head>
 
   <body
