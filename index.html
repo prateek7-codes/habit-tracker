@@ -14,23 +14,19 @@
     />
   
     <!-- Tailwind Config (MUST be before CDN) -->
+    <script src="https://cdn.tailwindcss.com"></script>
     <script>
-      window.tailwind = {
-        config: {
-          darkMode: "class",
-          theme: {
-            extend: {
-              fontFamily: {
-                sans: ["DM Sans", "system-ui", "sans-serif"],
-              },
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            fontFamily: {
+              sans: ["DM Sans", "system-ui", "sans-serif"],
             },
           },
         },
       };
     </script>
-  
-    <!-- Tailwind CDN (ONLY ONCE) -->
-    <script src="https://cdn.tailwindcss.com"></script>
   </head>
 
   <body
