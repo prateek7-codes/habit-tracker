@@ -13,16 +13,14 @@ async function checkAuth() {
   } = await supabase.auth.getSession();
 
   const authSection = document.getElementById("auth-section");
-  const addForm = document.getElementById("add-form");
+  const appContent = document.getElementById("app-content");
 
   if (!session) {
-    // Not logged in
-    if (addForm) addForm.style.display = "none";
     if (authSection) authSection.style.display = "block";
+    if (appContent) appContent.style.display = "none";
   } else {
-    // Logged in
     if (authSection) authSection.style.display = "none";
-    if (addForm) addForm.style.display = "flex";
+    if (appContent) appContent.style.display = "block";
   }
 }
 
@@ -254,11 +252,16 @@ function initializeTheme() {
 document.addEventListener('DOMContentLoaded', async () => {
   const loginBtn = document.getElementById("email-login-btn");
 
-if (loginBtn) {
-  loginBtn.addEventListener("click", loginWithEmail);
-}
+  if (loginBtn) {
+    loginBtn.addEventListener("click", loginWithEmail);
+  }
 
-checkAuth();
+  supabase.auth.onAuthStateChange((_event, session) => {
+    if (session) {
+      location.reload();
+    }
+  });
+
   form = document.getElementById('add-form');
   input = document.getElementById('habit-input');
   list = document.getElementById('habit-list');
@@ -266,12 +269,15 @@ checkAuth();
   metricActive = document.getElementById('metric-active');
   metricCompleted = document.getElementById('metric-completed');
 
-  form.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    await addHabit(input.value);
-  });
+  if (form) {
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      await addHabit(input.value);
+    });
+  }
 
   const habits = await fetchHabits();
   renderHabits(habits);
   initializeTheme();
+  await checkAuth();
 });
